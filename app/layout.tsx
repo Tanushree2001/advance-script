@@ -1,6 +1,9 @@
 import { DraftAlert } from "@/components/misc/DraftAlert"
+import { AdvanceScriptSection } from "@/components/misc/AdvanceScriptSection"
 import { HeaderNav } from "@/components/navigation/HeaderNav"
+import { getScriptsForPath } from "@/lib/advance-script-manager"
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import type { ReactNode } from "react"
 
 import "@/styles/globals.css"
@@ -16,21 +19,58 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+async function getRequestPath() {
+  const headerList = await headers()
+
+  // Middleware stores the current pathname here.
+  const middlewarePath = headerList.get("x-pathname")
+  if (middlewarePath) {
+    return middlewarePath
+  }
+
+  // Next.js sends the requested path in this header during SSR/ISR.
+  const invokePath = headerList.get("x-invoke-path")
+  if (invokePath) {
+    return invokePath
+  }
+
+  // Fallback to next-url which contains full URL (including query).
+  const nextUrl = headerList.get("next-url")
+  if (nextUrl) {
+    try {
+      const parsed = new URL(nextUrl, "http://localhost")
+      return parsed.pathname || "/"
+    } catch (error) {
+      return "/"
+    }
+  }
+
+  return "/"
+}
+
+export default async function RootLayout({
   // Layouts must accept a children prop.
   // This will be populated with nested layouts or pages
   children,
 }: {
   children: ReactNode
 }) {
+  const path = await getRequestPath()
+  const scripts = await getScriptsForPath(path)
+
   return (
     <html lang="en">
+      <head>
+        <AdvanceScriptSection scripts={scripts} section="head" />
+      </head>
       <body>
+        <AdvanceScriptSection scripts={scripts} section="body" />
         <DraftAlert />
         <div className="max-w-screen-md px-6 mx-auto">
           <HeaderNav />
           <main className="container py-10 mx-auto">{children}</main>
         </div>
+        <AdvanceScriptSection scripts={scripts} section="footer" />
       </body>
     </html>
   )
