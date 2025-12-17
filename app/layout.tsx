@@ -1,7 +1,7 @@
 import { DraftAlert } from "@/components/misc/DraftAlert"
 import { AdvanceScriptSection } from "@/components/misc/AdvanceScriptSection"
 import { HeaderNav } from "@/components/navigation/HeaderNav"
-import { getScriptsForPath } from "@/lib/advance-script-manager"
+import { getScriptsForPath, getBundleForPath } from "@/lib/advance-script-manager"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import type { ReactNode } from "react"
@@ -49,14 +49,17 @@ async function getRequestPath() {
 }
 
 export default async function RootLayout({
-  // Layouts must accept a children prop.
-  // This will be populated with nested layouts or pages
   children,
 }: {
   children: ReactNode
 }) {
   const path = await getRequestPath()
-  const scripts = await getScriptsForPath(path)
+  
+  // Get content type from Drupal (API call here, can be cached by Next.js)
+  const bundle = await getBundleForPath(path)
+  
+  // Fetch scripts filtered by both path and content type
+  const scripts = await getScriptsForPath(path, bundle)
 
   return (
     <html lang="en">

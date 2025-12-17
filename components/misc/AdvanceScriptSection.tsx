@@ -1,5 +1,3 @@
-// import { Fragment } from "react"
-
 import type {
   AdvanceScript,
   ScriptPlacement,
