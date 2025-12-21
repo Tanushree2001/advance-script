@@ -38,30 +38,49 @@ function parseAttributes(raw: string) {
   return attrs
 }
 
+// Normalize line endings to prevent hydration mismatch between server and client
+function normalizeLineEndings(str: string): string {
+  return str.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+}
+
 // Breaks a blob of HTML into discrete nodes we can render in React.
 function extractNodes(code: string, fallbackType: NodeType): RenderNode[] {
   if (!code?.trim()) {
     return []
   }
 
+  // Normalize line endings to prevent hydration mismatch
+  const normalizedCode = normalizeLineEndings(code)
+
   TAG_REGEX.lastIndex = 0
   const nodes: RenderNode[] = []
   let match: RegExpExecArray | null
 
-  while ((match = TAG_REGEX.exec(code))) {
+  while ((match = TAG_REGEX.exec(normalizedCode))) {
     const [, tag, rawAttrs, innerHTML] = match
     nodes.push({
       type: tag as NodeType,
       attrs: parseAttributes(rawAttrs ?? ""),
-      innerHTML: innerHTML ?? "",
+      innerHTML: normalizeLineEndings(innerHTML ?? ""),
     })
   }
 
+  // Only use fallback if no tags were found
   if (!nodes.length) {
+    // If fallback type is "script", check if content looks like HTML (not JavaScript)
+    // HTML content in a script tag would cause "Unexpected token '<'" error
+    if (fallbackType === "script") {
+      const trimmedCode = normalizedCode.trim()
+      // Skip if content looks like HTML (starts with < or contains HTML tags)
+      if (trimmedCode.startsWith("<") || /<[a-z][\s\S]*>/i.test(trimmedCode)) {
+        return nodes // Return empty, don't render HTML as JavaScript
+      }
+    }
+
     nodes.push({
       type: fallbackType,
       attrs: {},
-      innerHTML: code,
+      innerHTML: normalizedCode,
     })
   }
 

@@ -224,7 +224,6 @@ export async function getBundleForPath(
 
   try {
     const translatedPath = await drupal.translatePath(path)
-    console.log("translatedPath", translatedPath)
 
     if (!translatedPath?.jsonapi?.resourceName) {
       return undefined
